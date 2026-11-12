@@ -1389,6 +1389,30 @@ func extractParameters(message string) string {
 	return strings.TrimSpace(message[idx+len("parameters:"):])
 }
 
+// skipToPlanNode drops what auto_explain prints before the plan when the
+// lines are kept (jsonlog, csvlog): the rest of a multi-line Query Text and
+// the Query Parameters line. The first node carries "(cost=" (text format)
+// or opens the JSON plan. Without such a line the text is kept as it was.
+func skipToPlanNode(text string) string {
+	rest := text
+	for rest != "" {
+		line := rest
+		if i := strings.IndexByte(rest, '\n'); i >= 0 {
+			line = rest[:i]
+		}
+		t := strings.TrimLeft(line, " \t")
+		if strings.Contains(t, "(cost=") || strings.HasPrefix(t, "{") || strings.HasPrefix(t, "[") {
+			return strings.TrimLeft(rest, " \n\t")
+		}
+		if i := strings.IndexByte(rest, '\n'); i >= 0 {
+			rest = rest[i+1:]
+		} else {
+			break
+		}
+	}
+	return strings.TrimLeft(text, " \n\t")
+}
+
 // extractPlanText extracts the execution plan text from an auto_explain message.
 // It strips the "duration: X ms  plan:" prefix and the "Query Text: ..." line.
 // Returns the plan nodes text only.
@@ -1408,14 +1432,17 @@ func extractPlanText(message string) string {
 	if strings.HasPrefix(text, "Query Text:") {
 		// Find end of Query Text line: next newline or next plan node keyword
 		if nlIdx := strings.IndexByte(text, '\n'); nlIdx != -1 {
-			// Format with preserved newlines (JSON/CSV)
-			text = strings.TrimLeft(text[nlIdx+1:], " \n\t")
+			// Format with preserved newlines (JSON/CSV): a multi-line Query
+			// Text and the Query Parameters line come before the first
+			// node; skip to it.
+			text = skipToPlanNode(text[nlIdx+1:])
 		} else {
 			// Format without newlines (stderr): find earliest plan node keyword
 			planKeywords := []string{
 				"Result ", "Seq Scan ", "Index Scan ", "Index Only Scan ",
 				"Bitmap ", "Nested Loop", "Hash Join", "Merge Join",
 				"Sort ", "Aggregate", "Group", "Limit ", "Append",
+				"Gather ", "Gather Merge ", "Unique ", "Incremental Sort ",
 				"HashAggregate", "GroupAggregate", "WindowAgg",
 				"Subquery Scan", "Materialize", "CTE Scan",
 				"{", // JSON plan format
