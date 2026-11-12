@@ -1,0 +1,12 @@
+2026-11-12 17:22:30 UTC [83] 00000: db=appdb,user=app_user,app=psql,client=172.17.0.1 LOG:  duration: 3012.114 ms  plan:
+	Query Text: SELECT * FROM "ORDER_LINES" WHERE load_ref = '00091505'
+	Seq Scan on "ORDER_LINES"  (cost=0.00..117661.00 rows=248 width=36) (actual time=3.010..3011.950 rows=121 loops=1)
+	  Filter: ((load_ref)::text = '00091505'::text)
+	  Rows Removed by Filter: 6184449
+2026-11-12 17:26:22 UTC [83] 00000: db=appdb,user=app_user,app=psql,client=172.17.0.1 LOG:  duration: 228013.837 ms  statement: EXECUTE qpsqlpstmt_1001 (1, 2, 3);
+2026-11-12 17:26:22 UTC [83] 00000: db=appdb,user=app_user,app=psql,client=172.17.0.1 DETAIL:  prepare: PREPARE qpsqlpstmt_1001 AS SELECT * FROM "SHIPMENTS" WHERE SITE_ID IN ($1, $2, $3)
+2026-11-12 17:27:00 UTC [83] 00000: db=appdb,user=app_user,app=psql,client=172.17.0.1 LOG:  duration: 1500.000 ms  plan:
+	Query Text: SELECT count(*) FROM "SHIPMENTS"
+	Aggregate  (cost=1.00..1.01 rows=1 width=8) (actual time=1499.0..1499.0 rows=1 loops=1)
+	  ->  Seq Scan on "SHIPMENTS"  (cost=0.00..1.00 rows=10 width=0) (actual time=0.01..1200.0 rows=1500000 loops=1)
+2026-11-12 17:27:00 UTC [83] 00000: db=appdb,user=app_user,app=psql,client=172.17.0.1 LOG:  duration: 1500.512 ms  statement: SELECT count(*) FROM "SHIPMENTS"
